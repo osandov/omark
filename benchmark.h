@@ -16,7 +16,7 @@ struct benchmark_results {
 	size_t bytes_written;
 };
 
-int create_initial_files(void);
+int init_benchmark(void);
 
 void run_benchmark(struct benchmark_results *results);
 

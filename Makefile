@@ -1,4 +1,4 @@
-ALL_CFLAGS := -Wall -std=gnu99 -ljansson $(CFLAGS)
+ALL_CFLAGS := -Wall -std=gnu99 -g -ljansson $(CFLAGS)
 
 omark: benchmark.o config.o main.o prng.o
 	$(CC) $(ALL_CFLAGS) -o $@ $^

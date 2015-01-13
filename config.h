@@ -5,12 +5,18 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <stdbool.h>
+
 /* I/O block size. */
 extern size_t block_size;
+/* Should all I/O be block-aligned? */
+extern bool block_aligned;
 /* Number of files to create before the benchmark runs. */
 extern long initial_files;
 /* Minimum/maximum initial file size. */
-extern size_t initial_file_min_size, initial_file_max_size;
+extern size_t min_file_size, max_file_size;
+/* Minimum/maximum file write operation sizes. */
+extern size_t min_write_size, max_write_size;
 /* Ratio of I/O (read/write) to directory (create/delete) operations. */
 extern double io_dir_ratio;
 /* Ratio of reads to writes. */

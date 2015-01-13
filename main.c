@@ -14,7 +14,7 @@ static void usage(bool error)
 	FILE *file = error ? stderr : stdout;
 
 	fprintf(file,
-		"Usage: %1$s -c CONFIG\n"
+		"Usage: %1$s [-c CONFIG] [-d]\n"
 		"       %1$s -h\n"
 		"\n"
 		"Filesystem benchmark.\n",
@@ -90,13 +90,13 @@ static void verbose_report(const struct benchmark_results *results)
 	       100.0 * ((double)results->write_operations / (double)io_operations),
 	       results->write_operations / elapsed_secs);
 
-	printf("Create operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
+	printf("Create operations: %ld (%.1f%% total, %.1f%% create/delete %.2f/sec)\n",
 	       results->create_operations,
 	       100.0 * ((double)results->create_operations / (double)total_operations),
 	       100.0 * ((double)results->create_operations / (double)dir_operations),
 	       results->create_operations / elapsed_secs);
 
-	printf("Delete operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
+	printf("Delete operations: %ld (%.1f%% total, %.1f%% create/delete, %.2f/sec)\n",
 	       results->delete_operations,
 	       100.0 * ((double)results->delete_operations / (double)total_operations),
 	       100.0 * ((double)results->delete_operations / (double)dir_operations),
@@ -121,12 +121,14 @@ int main(int argc, char *argv[])
 {
 	int opt;
 	char *config_path = NULL;
+	bool dump_config_flag = false;
+
 	int ret;
 	struct benchmark_results results;
 
 	progname = argv[0];
 
-	while ((opt = getopt(argc, argv, "c:h")) != -1) {
+	while ((opt = getopt(argc, argv, "c:dh")) != -1) {
 		switch (opt) {
 		case 'c':
 			free(config_path);
@@ -136,6 +138,9 @@ int main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 			break;
+		case 'd':
+			dump_config_flag = true;
+			break;
 		case 'h':
 			usage(false);
 		default:
@@ -143,16 +148,21 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!config_path)
-		usage(true);
-	ret = parse_config(config_path);
-	free(config_path);
-	if (ret)
-		return EXIT_FAILURE;
+	if (config_path) {
+		ret = parse_config(config_path);
+		free(config_path);
+		if (ret)
+			return EXIT_FAILURE;
+	}
+
+	if (dump_config_flag) {
+		dump_config();
+		return EXIT_SUCCESS;
+	}
 
 	prng_seed(0xdeadbeef);
 
-	ret = create_initial_files();
+	ret = init_benchmark();
 	if (ret)
 		return EXIT_FAILURE;
 
