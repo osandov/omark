@@ -1,0 +1,43 @@
+= Omar's PostMark
+Omar Sandoval <osandov@osandov.com>
+
+PostMark is disgusting and old. OMark is a clean rewrite from scratch, developed
+for research on http://arrakis.cs.washington.edu/[Arrakis].
+
+Compared to Postmark, OMark:
+
+- Supports multi-core benchmarking
+- Is written in modern C99
+- Is configurable with YAML
+
+Like PostMark, OMark simulates a ``realistic'' server filesystem workload
+(specifically, a mail server): lots of small, short-lived files which are
+created, deleted, read from, and appended to. The benchmark models this by
+creating an initial pool of files of random size and contents and then carrying
+out these operations at random.
+
+== Usage
+OMark is configured with a YAML configuration file which is specified with the
+`-c` flag. This can be used to specify:
+
+- The size of the initial file set
+- The read-to-write operation create-to-delete operation ratios
+- A maximum number of operations or time limit
+
+[source,yaml]
+----
+initial-files: 1000 # Number of files to create before the benchmark runs
+read-write-ratio: 0.75 # Ratio of reads to writes: 75% will be reads (defaults to 0.5)
+create-delete-ratio: 0.8 # Ratio of creates to deletes: 80% will be creates (defaults to 0.5)
+max-operations: 10000 # Maximum number of operations (defaults to 0, which means no limit)
+time-limit: 10 # Maximum number of seconds to run (defaults to 0, which means no limit)
+----
+
+The configuration file is meant to specify properties of the benchmark itself as
+opposed to a particular run. For that reason, properties like the number of CPU
+cores and the directory to run in are specified with command line flags:
+
+- `-c CONFIG`: YAML configuration file to use
+- `-C DIR`: directory to run in
+- `-s CPUSET`: CPU set to run on, specified as comma-separated list of integers
+  defaults to just CPU 0
