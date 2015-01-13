@@ -1,11 +1,11 @@
 ALL_CFLAGS := -Wall -std=gnu99 -ljansson $(CFLAGS)
 
-omark: config.o omark.o
+omark: benchmark.o config.o main.o prng.o
 	$(CC) $(ALL_CFLAGS) -o $@ $^
 
-%.o: %.c config.h
+%.o: %.c
 	$(CC) $(ALL_CFLAGS) -o $@ -c $<
 
 .PHONY: clean
 clean:
-	rm -f omark.o omark
+	rm -f benchmark.o config.o main.o prng.o omark
