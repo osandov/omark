@@ -19,7 +19,7 @@ out these operations at random.
 OMark is configured with a JSON configuration file which is specified with the
 `-c` flag. The valid keys are:
 
-- `block-size` (integer)`: size of I/O operations
+- `block-size` (integer): size of I/O operations
 - `block-aligned` (boolean): should all files and I/O be aligned to the block size?
 - `initial-files` (integer): number of files to create before starting the benchmark
 - `min-file-size` (integer): minimum size of file when it is initially created
@@ -33,14 +33,14 @@ OMark is configured with a JSON configuration file which is specified with the
 - `time-limit` (integer): maximum number of seconds to run (0 means no limit)
 
 All parameters are optional and have reasonable defaults. Here is an example of
-a benchmark that only does reads and writes (no creates or deletes) and of
-those, 50% are reads:
+a benchmark that only does reads and writes (no creates or deletes), 60% of
+which are reads:
 
 [source,json]
 ----
 {
 	"io-dir-ratio": 1.0,
-	"read-write-ratio": 0.75
+	"read-write-ratio": 0.6
 }
 ----
 
