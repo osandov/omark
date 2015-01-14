@@ -1,7 +1,0 @@
-{
-	"initial-files": 1000,
-	"read-write-ratio": 0.75,
-	"create-delete-ratio": 0.8,
-	"max-operations": 10000,
-	"time-limit": 10
-}
