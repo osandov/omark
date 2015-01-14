@@ -109,8 +109,7 @@ static void usage(bool error)
 	FILE *file = error ? stderr : stdout;
 
 	fprintf(file,
-		"Usage: %1$s [-c CONFIG] [-C DIR] [-d]\n"
-		"       %1$s -h\n"
+		"Usage: %1$s [OPTIONS]\n"
 		"\n"
 		"Filesystem benchmark.\n"
 		"\n"
@@ -118,6 +117,7 @@ static void usage(bool error)
 		"  -C DIR       Change directories before running\n"
 		"  -c CONFIG    Benchmark configuration file\n"
 		"  -d           Dump benchmark configuration\n"
+		"  -s SEED      PRNG seed value\n"
 		"\n"
 		"Miscellaneous:\n"
 		"  -h           Display this help message and exit\n",
@@ -134,13 +134,14 @@ int main(int argc, char *argv[])
 	bool chdir_path_flag = false;
 	bool config_path_flag = false;
 	bool dump_params_flag = false;
+	long seed = 0xdeadbeefL;
 
 	int ret;
 	struct benchmark_results results;
 
 	progname = argv[0];
 
-	while ((opt = getopt(argc, argv, "C:c:dh")) != -1) {
+	while ((opt = getopt(argc, argv, "C:c:ds:h")) != -1) {
 		switch (opt) {
 		case 'C':
 			strncpy(chdir_path, optarg, sizeof(chdir_path) - 1);
@@ -154,6 +155,14 @@ int main(int argc, char *argv[])
 			break;
 		case 'd':
 			dump_params_flag = true;
+			break;
+		case 's':
+			seed = strtol(optarg, NULL, 0);
+			if (seed == 0) {
+				fprintf(stderr, "%s: invalid PRNG seed\n",
+					progname);
+				return EXIT_FAILURE;
+			}
 			break;
 		case 'h':
 			usage(false);
@@ -181,7 +190,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	prng_seed(0xdeadbeef);
+	prng_seed(seed);
 
 	ret = init_benchmark();
 	if (ret)
