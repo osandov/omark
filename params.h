@@ -12,7 +12,7 @@ extern size_t block_size;
 /* Should all I/O be block-aligned? */
 extern bool block_aligned;
 /* Number of files to create before the benchmark runs. */
-extern long initial_files;
+extern unsigned long initial_files;
 /* Minimum/maximum initial file size. */
 extern size_t min_file_size, max_file_size;
 /* Minimum/maximum file write operation sizes. */
@@ -24,9 +24,9 @@ extern double read_write_ratio;
 /* Ratio of creates to deletes. */
 extern double create_delete_ratio;
 /* Maximum number of operations (0 means no limit). */
-extern long max_operations;
+extern unsigned long max_operations;
 /* Maximum number of seconds to run (0 means no limit). */
-extern long time_limit;
+extern unsigned long time_limit;
 
 /**
  * parse_params - parse a configuration file and update the benchmark parameters

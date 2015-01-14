@@ -1,4 +1,4 @@
-ALL_CFLAGS := -Wall -std=c99 -D_XOPEN_SOURCE=500 -g -ljansson $(CFLAGS)
+ALL_CFLAGS := -Wall -std=c99 -D_XOPEN_SOURCE=700 -g $(CFLAGS)
 
 omark: benchmark.o main.o params.o prng.o
 	$(CC) $(ALL_CFLAGS) -o $@ $^

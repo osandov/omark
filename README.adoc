@@ -7,7 +7,7 @@ Compared to Postmark, OMark:
 
 - Supports multi-core benchmarking (work-in-progress)
 - Is written in modern C99
-- Is highly configurable with a simple JSON configuration file
+- Is highly configurable
 
 Like PostMark, OMark simulates a ``realistic'' server filesystem workload
 (specifically, a mail server): lots of small, short-lived files which are
@@ -16,8 +16,9 @@ creating an initial pool of files of random size and contents and then carrying
 out these operations at random.
 
 == Benchmark Configuration
-OMark is configured with a JSON configuration file which is specified with the
-`-c` flag. The valid keys are:
+OMark is configured with a configuration file which is specified with the `-c`
+flag. The format is a simple series of `key value` lines, where the valid keys
+are:
 
 - `block-size` (integer): size of I/O operations
 - `block-aligned` (boolean): should all files and I/O be aligned to the block size?
@@ -36,12 +37,10 @@ All parameters are optional and have reasonable defaults. Here is an example of
 a benchmark that only does reads and writes (no creates or deletes), 60% of
 which are reads:
 
-[source,json]
 ----
-{
-	"io-dir-ratio": 1.0,
-	"read-write-ratio": 0.6
-}
+block-aligned false
+io-dir-ratio 1.0
+read-write-ratio 0.6
 ----
 
 Notice that only properties of the benchmark itself are configured in the
