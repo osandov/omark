@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "benchmark.h"
-#include "config.h"
+#include "params.h"
 #include "prng.h"
 
 static const char *progname;
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 {
 	int opt;
 	char *config_path = NULL;
-	bool dump_config_flag = false;
+	bool dump_params_flag = false;
 
 	int ret;
 	struct benchmark_results results;
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 		case 'd':
-			dump_config_flag = true;
+			dump_params_flag = true;
 			break;
 		case 'h':
 			usage(false);
@@ -149,14 +149,14 @@ int main(int argc, char *argv[])
 	}
 
 	if (config_path) {
-		ret = parse_config(config_path);
+		ret = parse_params(config_path);
 		free(config_path);
 		if (ret)
 			return EXIT_FAILURE;
 	}
 
-	if (dump_config_flag) {
-		dump_config();
+	if (dump_params_flag) {
+		dump_params();
 		return EXIT_SUCCESS;
 	}
 

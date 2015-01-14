@@ -1,6 +1,6 @@
 #include <jansson.h>
 #include <stdio.h>
-#include "config.h"
+#include "params.h"
 
 size_t block_size = 512;
 bool block_aligned = false;
@@ -51,7 +51,7 @@ static void config_get_float(json_t *config, const char *key, double *dest)
 		*dest = json_real_value(object);
 }
 
-int parse_config(const char *config_path)
+int parse_params(const char *config_path)
 {
 	json_t *config;
 	json_error_t error;
@@ -80,9 +80,9 @@ int parse_config(const char *config_path)
 	return 0;
 }
 
-void dump_config(void)
+void dump_params(void)
 {
-	fprintf(stderr, "Configuration:\n");
+	fprintf(stderr, "Benchmark parameters:\n");
 	fprintf(stderr, "  block size=%zu\n", block_size);
 	fprintf(stderr, "  block aligned=%s\n", block_aligned ? "yes" : "no");
 	fprintf(stderr, "  initial files=%ld\n", initial_files);

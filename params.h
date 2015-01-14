@@ -2,8 +2,8 @@
  * Benchmark configuration.
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef PARAMS_H
+#define PARAMS_H
 
 #include <stdbool.h>
 
@@ -28,8 +28,16 @@ extern long max_operations;
 /* Maximum number of seconds to run (0 means no limit). */
 extern long time_limit;
 
-int parse_config(const char *config_path);
+/**
+ * parse_params - parse a configuration file and update the benchmark parameters
+ * accordingly
+ * @config_path: file to read configuration from
+ */
+int parse_params(const char *config_path);
 
-void dump_config(void);
+/**
+ * dump_params - dump the benchmark parameters in a human-readable format
+ */
+void dump_params(void);
 
-#endif /* CONFIG_H */
+#endif /* PARAMS_H */

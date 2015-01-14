@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "benchmark.h"
-#include "config.h"
+#include "params.h"
 #include "prng.h"
 
 static sig_atomic_t time_is_up;

@@ -1,14 +1,13 @@
 = Omar's PostMark
-Omar Sandoval <osandov@osandov.com>
 
 PostMark is old and disgusting. OMark is a clean rewrite from scratch,
 developed during research for http://arrakis.cs.washington.edu/[Arrakis].
 
 Compared to Postmark, OMark:
 
-- Supports multi-core benchmarking
+- Supports multi-core benchmarking (work-in-progress)
 - Is written in modern C99
-- Is configurable with JSON
+- Is highly configurable with a simple JSON configuration file
 
 Like PostMark, OMark simulates a ``realistic'' server filesystem workload
 (specifically, a mail server): lots of small, short-lived files which are
@@ -16,30 +15,35 @@ created, deleted, read from, and appended to. The benchmark models this by
 creating an initial pool of files of random size and contents and then carrying
 out these operations at random.
 
-== Usage
+== Benchmark Configuration
 OMark is configured with a JSON configuration file which is specified with the
-`-c` flag. This can be used to specify:
+`-c` flag. The valid keys are:
 
-- The size of the initial file set
-- The read-to-write operation create-to-delete operation ratios
-- A maximum number of operations or time limit
+- `block-size` (integer)`: size of I/O operations
+- `block-aligned` (boolean): should all files and I/O be aligned to the block size?
+- `initial-files` (integer): number of files to create before starting the benchmark
+- `min-file-size` (integer): minimum size of file when it is initially created
+- `max-file-size` (integer): maximum size of file when it is initially created
+- `min-write-size` (integer): minimum size of write operation
+- `max-write-size` (integer): maximum size of write operation
+- `io-dir-ratio` (real): ratio of I/O operations (reads/writes) to directory operations (creates/deletes)
+- `read-write-ratio` (real): ratio of reads to writes
+- `create-delete-ratio` (real): ratio of creates to deletes
+- `max-operations` (integer): maximum number of operations to run (0 means no limit)
+- `time-limit` (integer): maximum number of seconds to run (0 means no limit)
+
+All parameters are optional and have reasonable defaults. Here is an example of
+a benchmark that only does reads and writes (no creates or deletes) and of
+those, 50% are reads:
 
 [source,json]
 ----
 {
-	"initial-files": 1000,
-	"read-write-ratio": 0.75,
-	"create-delete-ratio": 0.8,
-	"max-operations": 10000,
-	"time-limit": 10
+	"io-dir-ratio": 1.0,
+	"read-write-ratio": 0.75
 }
 ----
 
-The configuration file is meant to specify properties of the benchmark itself as
-opposed to a particular run. For that reason, properties like the number of CPU
-cores and the directory to run in are specified with command line flags:
-
-- `-c CONFIG`: JSON configuration file to use
-- `-C DIR`: directory to run in
-- `-s CPUSET`: CPU set to run on, specified as comma-separated list of integers
-  defaults to just CPU 0
+Notice that only properties of the benchmark itself are configured in the
+configuration file. Properties of a particular run (like where to run or on
+which CPUs to run) are specified with command line flags instead.
