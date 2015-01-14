@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,20 +9,6 @@
 #include "prng.h"
 
 static const char *progname;
-
-static void usage(bool error)
-{
-	FILE *file = error ? stderr : stdout;
-
-	fprintf(file,
-		"Usage: %1$s [-c CONFIG] [-d]\n"
-		"       %1$s -h\n"
-		"\n"
-		"Filesystem benchmark.\n",
-		progname);
-
-	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
-}
 
 static void timespec_subtract(struct timespec *result, const struct timespec *x,
 			      const struct timespec *y)
@@ -117,10 +104,35 @@ static void verbose_report(const struct benchmark_results *results)
 	printf("/s)\n");
 }
 
+static void usage(bool error)
+{
+	FILE *file = error ? stderr : stdout;
+
+	fprintf(file,
+		"Usage: %1$s [-c CONFIG] [-C DIR] [-d]\n"
+		"       %1$s -h\n"
+		"\n"
+		"Filesystem benchmark.\n"
+		"\n"
+		"Configuration:\n"
+		"  -C DIR       Change directories before running\n"
+		"  -c CONFIG    Benchmark configuration file\n"
+		"  -d           Dump benchmark configuration\n"
+		"\n"
+		"Miscellaneous:\n"
+		"  -h           Display this help message and exit\n",
+		progname);
+
+	exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
 	int opt;
-	char *config_path = NULL;
+	char chdir_path[PATH_MAX];
+	char config_path[PATH_MAX];
+	bool chdir_path_flag = false;
+	bool config_path_flag = false;
 	bool dump_params_flag = false;
 
 	int ret;
@@ -128,15 +140,17 @@ int main(int argc, char *argv[])
 
 	progname = argv[0];
 
-	while ((opt = getopt(argc, argv, "c:dh")) != -1) {
+	while ((opt = getopt(argc, argv, "C:c:dh")) != -1) {
 		switch (opt) {
+		case 'C':
+			strncpy(chdir_path, optarg, sizeof(chdir_path) - 1);
+			chdir_path[sizeof(chdir_path) - 1] = '\0';
+			chdir_path_flag = true;
+			break;
 		case 'c':
-			free(config_path);
-			config_path = strdup(optarg);
-			if (!config_path) {
-				perror("strdup");
-				return EXIT_FAILURE;
-			}
+			strncpy(config_path, optarg, sizeof(config_path) - 1);
+			config_path[sizeof(config_path) - 1] = '\0';
+			config_path_flag = true;
 			break;
 		case 'd':
 			dump_params_flag = true;
@@ -148,9 +162,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (config_path) {
+	if (config_path_flag) {
 		ret = parse_params(config_path);
-		free(config_path);
 		if (ret)
 			return EXIT_FAILURE;
 	}
@@ -158,6 +171,14 @@ int main(int argc, char *argv[])
 	if (dump_params_flag) {
 		dump_params();
 		return EXIT_SUCCESS;
+	}
+
+	if (chdir_path_flag) {
+		ret = chdir(chdir_path);
+		if (ret) {
+			perror("chdir");
+			return ret;
+		}
 	}
 
 	prng_seed(0xdeadbeef);
