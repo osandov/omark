@@ -2,10 +2,12 @@
 #define BENCHMARK_H
 
 #include <time.h>
+#include <pthread.h>
+#include <unistd.h>
+#include "prng.h"
 
 struct benchmark_results {
-	struct timespec start_time;
-	struct timespec end_time;
+	struct timespec elapsed_time;
 
 	long read_operations;
 	long write_operations;
@@ -16,8 +18,24 @@ struct benchmark_results {
 	size_t bytes_written;
 };
 
-int init_benchmark(void);
+struct benchmark_thread {
+	pthread_t thread;
+	struct benchmark_results results;
+	uint32_t prng_seed;
+	struct prng prng;
+	char *buffer;
+};
 
-void run_benchmark(struct benchmark_results *results);
+extern pthread_barrier_t barrier;
+
+/**
+ * init_benchmark_files - create initial set of files
+ */
+int init_benchmark_files(uint32_t prng_seed);
+
+/**
+ * run_benchmark - run the benchmark
+ */
+void *run_benchmark(void *arg);
 
 #endif /* BENCHMARK_H */

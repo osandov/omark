@@ -5,7 +5,7 @@ developed during research for http://arrakis.cs.washington.edu/[Arrakis].
 
 Compared to Postmark, OMark:
 
-- Supports multi-core benchmarking (work-in-progress)
+- Supports multi-core benchmarking
 - Is written in modern C99
 - Is highly configurable
 
@@ -44,5 +44,5 @@ read-write-ratio 0.6
 ----
 
 Notice that only properties of the benchmark itself are configured in the
-configuration file. Properties of a particular run (like where to run or on
-which CPUs to run) are specified with command line flags instead.
+configuration file. Properties of a particular run (like how many processes to
+run or which directory to run in) are specified with command line flags instead.

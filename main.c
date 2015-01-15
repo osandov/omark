@@ -1,25 +1,20 @@
+#include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "benchmark.h"
 #include "params.h"
 #include "prng.h"
 
 static const char *progname;
-
-static void timespec_subtract(struct timespec *result, const struct timespec *x,
-			      const struct timespec *y)
-{
-	result->tv_sec = x->tv_sec - y->tv_sec;
-	result->tv_nsec = x->tv_nsec - y->tv_nsec;
-	if (result->tv_nsec < 0) {
-		result->tv_nsec += 1000000000L;
-		result->tv_sec--;
-	}
-}
+static struct benchmark_thread *threads;
+static int num_threads = 1;
 
 static void print_human_readable_bytes(double bytes, int precision)
 {
@@ -29,61 +24,52 @@ static void print_human_readable_bytes(double bytes, int precision)
 		bytes /= 1024.0;
 		i++;
 	}
-	printf("%.*f%s", precision, bytes, units[i]);
+	printf("%.*f %s", precision, bytes, units[i]);
 }
 
-static void verbose_report(const struct benchmark_results *results)
+static void verbose_print_results(const struct benchmark_results *results,
+				  double elapsed_secs)
 {
-	struct timespec elapsed;
-	double elapsed_secs;
 	long total_operations, io_operations, dir_operations;
-
-	timespec_subtract(&elapsed, &results->end_time, &results->start_time);
-	elapsed_secs = elapsed.tv_sec + elapsed.tv_nsec / 1000000000.0;
-
-	printf("Elapsed time: %lld.%.9ldsec\n", (long long)elapsed.tv_sec,
-	       elapsed.tv_nsec);
-
-	printf("\n");
 
 	io_operations = results->read_operations + results->write_operations;
 	dir_operations = results->create_operations + results->delete_operations;
 	total_operations = io_operations + dir_operations;
 
-	printf("Total operations: %ld (%.2f/sec)\n",
+	printf("  Total operations: %ld (%.2f/sec)\n",
 	       total_operations, total_operations / elapsed_secs);
 
-	printf("I/O (read/write) operations: %ld (%.1f%%, %.2f/sec)\n",
+	printf("  I/O (read/write) operations: %ld (%.1f%%, %.2f/sec)\n",
 	       io_operations,
 	       100.0 * ((double)io_operations / (double)total_operations),
 	       io_operations / elapsed_secs);
 
-	printf("Directory (create/delete) operations: %ld (%.1f%%, %.2f/sec)\n",
+	printf("  Directory (create/delete) operations: %ld (%.1f%%, %.2f/sec)\n",
 	       dir_operations,
 	       100.0 * ((double)dir_operations / (double)total_operations),
 	       dir_operations / elapsed_secs);
 
 	printf("\n");
 
-	printf("Read operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
+	printf("  Read operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
 	       results->read_operations,
 	       100.0 * ((double)results->read_operations / (double)total_operations),
 	       100.0 * ((double)results->read_operations / (double)io_operations),
 	       results->read_operations / elapsed_secs);
 
-	printf("Write operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
+	printf("  Write operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
 	       results->write_operations,
 	       100.0 * ((double)results->write_operations / (double)total_operations),
 	       100.0 * ((double)results->write_operations / (double)io_operations),
 	       results->write_operations / elapsed_secs);
 
-	printf("Create operations: %ld (%.1f%% total, %.1f%% create/delete %.2f/sec)\n",
+	printf("  Create operations: %ld (%.1f%% total, %.1f%% create/delete %.2f/sec)\n",
 	       results->create_operations,
 	       100.0 * ((double)results->create_operations / (double)total_operations),
 	       100.0 * ((double)results->create_operations / (double)dir_operations),
 	       results->create_operations / elapsed_secs);
 
-	printf("Delete operations: %ld (%.1f%% total, %.1f%% create/delete, %.2f/sec)\n",
+	printf("  Delete operations: %ld (%.1f%% total, %.1f%% create/delete, %.2f/sec)\n",
 	       results->delete_operations,
 	       100.0 * ((double)results->delete_operations / (double)total_operations),
 	       100.0 * ((double)results->delete_operations / (double)dir_operations),
@@ -91,18 +77,89 @@ static void verbose_report(const struct benchmark_results *results)
 
 	printf("\n");
 
-	printf("Read ");
+	printf("  Read ");
 	print_human_readable_bytes(results->bytes_read, 2);
 	printf(" (");
 	print_human_readable_bytes(results->bytes_read / elapsed_secs, 2);
 	printf("/s)\n");
 
-	printf("Wrote ");
+	printf("  Wrote ");
 	print_human_readable_bytes(results->bytes_written, 2);
 	printf(" (");
 	print_human_readable_bytes(results->bytes_written / elapsed_secs, 2);
 	printf("/s)\n");
 }
+
+static void verbose_thread(int i)
+{
+	const struct benchmark_results *results;
+	double elapsed_secs;
+
+	results = &threads[i].results;
+
+	elapsed_secs = (results->elapsed_time.tv_sec +
+			results->elapsed_time.tv_nsec / 1000000000.0);
+
+	printf("Thread %d:\n", i);
+
+	printf("  Elapsed time: %lld.%.9ld sec\n",
+	       (long long)results->elapsed_time.tv_sec,
+	       results->elapsed_time.tv_nsec);
+
+	printf("\n");
+
+	verbose_print_results(results, elapsed_secs);
+}
+
+static void verbose_total(const struct benchmark_results *results)
+{
+	double elapsed_secs, avg_elapsed_secs;
+
+	elapsed_secs = (results->elapsed_time.tv_sec +
+			results->elapsed_time.tv_nsec / 1000000000.0);
+	avg_elapsed_secs = elapsed_secs / num_threads;
+
+	printf("\nTotal:\n");
+	printf("  Total elapsed time: %.9f sec\n", elapsed_secs);
+	printf("  Average elapsed time: %.9f sec\n", avg_elapsed_secs);
+	printf("\n");
+
+	verbose_print_results(results, avg_elapsed_secs);
+}
+
+static void verbose_report(void)
+{
+	struct benchmark_results total_results = {};
+
+	for (int i = 0; i < num_threads; i++) {
+		if (i > 0)
+			printf("\n");
+
+		verbose_thread(i);
+
+		total_results.read_operations += threads[i].results.read_operations;
+		total_results.write_operations += threads[i].results.write_operations;
+		total_results.create_operations += threads[i].results.create_operations;
+		total_results.delete_operations += threads[i].results.delete_operations;
+
+		total_results.bytes_read += threads[i].results.bytes_read;
+		total_results.bytes_written += threads[i].results.bytes_written;
+
+		total_results.elapsed_time.tv_sec +=
+			threads[i].results.elapsed_time.tv_sec;
+		total_results.elapsed_time.tv_nsec +=
+			threads[i].results.elapsed_time.tv_nsec;
+		if (total_results.elapsed_time.tv_nsec >= 1000000000L) {
+			total_results.elapsed_time.tv_nsec -= 1000000000L;
+			total_results.elapsed_time.tv_sec++;
+		}
+	}
+
+	if (num_threads > 1)
+		verbose_total(&total_results);
+}
+
+#define OPTS EXTRA_OPTS
 
 static void usage(bool error)
 {
@@ -117,6 +174,7 @@ static void usage(bool error)
 		"  -C DIR       Change directories before running\n"
 		"  -c CONFIG    Benchmark configuration file\n"
 		"  -d           Dump benchmark configuration\n"
+		"  -p THREADS   Run multiple threads in parallel\n"
 		"  -s SEED      PRNG seed value\n"
 		"\n"
 		"Miscellaneous:\n"
@@ -128,38 +186,48 @@ static void usage(bool error)
 
 int main(int argc, char *argv[])
 {
-	int opt;
-	char chdir_path[PATH_MAX];
-	char config_path[PATH_MAX];
-	bool chdir_path_flag = false;
-	bool config_path_flag = false;
-	bool dump_params_flag = false;
-	long seed = 0xdeadbeefL;
-
 	int ret;
-	struct benchmark_results results;
+
+	int opt;
+	char *end;
+	char *chdir_path;
+	char *config_path;
+	long seed = 0xdeadbeefL;
+	bool dump_params_flag = false;
 
 	progname = argv[0];
 
-	while ((opt = getopt(argc, argv, "C:c:ds:h")) != -1) {
+	while ((opt = getopt(argc, argv, "C:c:dp:s:h")) != -1) {
 		switch (opt) {
 		case 'C':
-			strncpy(chdir_path, optarg, sizeof(chdir_path) - 1);
-			chdir_path[sizeof(chdir_path) - 1] = '\0';
-			chdir_path_flag = true;
+			chdir_path = strdup(optarg);
+			if (!chdir_path) {
+				perror("strdup");
+				return EXIT_FAILURE;
+			}
 			break;
 		case 'c':
-			strncpy(config_path, optarg, sizeof(config_path) - 1);
-			config_path[sizeof(config_path) - 1] = '\0';
-			config_path_flag = true;
+			config_path = strdup(optarg);
+			if (!config_path) {
+				perror("strdup");
+				return EXIT_FAILURE;
+			}
 			break;
 		case 'd':
 			dump_params_flag = true;
 			break;
 		case 's':
-			seed = strtol(optarg, NULL, 0);
-			if (seed == 0) {
+			seed = strtol(optarg, &end, 0);
+			if (*end != '\0') {
 				fprintf(stderr, "%s: invalid PRNG seed\n",
+					progname);
+				return EXIT_FAILURE;
+			}
+			break;
+		case 'p':
+			num_threads = strtol(optarg, &end, 10);
+			if (num_threads == 0 || *end != '\0') {
+				fprintf(stderr, "%s: invalid number of threads\n",
 					progname);
 				return EXIT_FAILURE;
 			}
@@ -171,10 +239,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (config_path_flag) {
+	if (config_path) {
 		ret = parse_params(config_path);
 		if (ret)
 			return EXIT_FAILURE;
+		free(config_path);
 	}
 
 	if (dump_params_flag) {
@@ -182,23 +251,59 @@ int main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	if (chdir_path_flag) {
+	if (chdir_path) {
 		ret = chdir(chdir_path);
 		if (ret) {
 			perror("chdir");
-			return ret;
+			return EXIT_FAILURE;
+		}
+		free(chdir_path);
+	}
+
+	threads = calloc(num_threads, sizeof(threads[0]));
+	if (!threads) {
+		perror("calloc");
+		return EXIT_FAILURE;
+	}
+	errno = pthread_barrier_init(&barrier, NULL, num_threads);
+	if (errno) {
+		perror("pthread_barrier_init");
+		return EXIT_FAILURE;
+	}
+
+	for (int i = 0; i < num_threads; i++) {
+		threads[i].prng_seed = seed + i;
+		threads[i].buffer = malloc(block_size);
+		if (!threads[i].buffer) {
+			perror("malloc");
+			return EXIT_FAILURE;
 		}
 	}
 
-	prng_seed(seed);
-
-	ret = init_benchmark();
+	ret = init_benchmark_files(seed - 1);
 	if (ret)
 		return EXIT_FAILURE;
 
-	run_benchmark(&results);
+	for (int i = 0; i < num_threads; i++) {
+		errno = pthread_create(&threads[i].thread, NULL, run_benchmark,
+				       &threads[i]);
+		if (errno != 0) {
+			perror("pthread_create");
+			return EXIT_FAILURE;
+		}
+	}
 
-	verbose_report(&results);
+	for (int i = 0; i < num_threads; i++) {
+		void *retval;
+
+		pthread_join(threads[i].thread, &retval);
+		if (retval) {
+			fprintf(stderr, "%s: thread %d failed\n", progname, i);
+			return EXIT_FAILURE;
+		}
+	}
+
+	verbose_report();
 
 	return EXIT_SUCCESS;
 }
