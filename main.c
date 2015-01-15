@@ -213,8 +213,8 @@ int main(int argc, char *argv[])
 
 	int opt;
 	char *end;
-	char *chdir_path;
-	char *config_path;
+	char *chdir_path = NULL;
+	char *config_path = NULL;
 	long seed = 0xdeadbeefL;
 	bool dump_params_flag = false;
 	bool verbose = true;
