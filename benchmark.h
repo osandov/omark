@@ -9,10 +9,10 @@
 struct benchmark_results {
 	struct timespec elapsed_time;
 
-	long read_operations;
-	long write_operations;
-	long create_operations;
-	long delete_operations;
+	unsigned long read_operations;
+	unsigned long write_operations;
+	unsigned long create_operations;
+	unsigned long delete_operations;
 
 	size_t bytes_read;
 	size_t bytes_written;

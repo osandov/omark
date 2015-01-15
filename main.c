@@ -30,46 +30,46 @@ static void print_human_readable_bytes(double bytes, int precision)
 static void verbose_print_results(const struct benchmark_results *results,
 				  double elapsed_secs)
 {
-	long total_operations, io_operations, dir_operations;
+	unsigned long total_operations, io_operations, dir_operations;
 
 	io_operations = results->read_operations + results->write_operations;
 	dir_operations = results->create_operations + results->delete_operations;
 	total_operations = io_operations + dir_operations;
 
-	printf("  Total operations: %ld (%.2f/sec)\n",
+	printf("  Total operations: %lu (%.2f/sec)\n",
 	       total_operations, total_operations / elapsed_secs);
 
-	printf("  I/O (read/write) operations: %ld (%.1f%%, %.2f/sec)\n",
+	printf("  I/O (read/write) operations: %lu (%.1f%%, %.2f/sec)\n",
 	       io_operations,
 	       100.0 * ((double)io_operations / (double)total_operations),
 	       io_operations / elapsed_secs);
 
-	printf("  Directory (create/delete) operations: %ld (%.1f%%, %.2f/sec)\n",
+	printf("  Directory (create/delete) operations: %lu (%.1f%%, %.2f/sec)\n",
 	       dir_operations,
 	       100.0 * ((double)dir_operations / (double)total_operations),
 	       dir_operations / elapsed_secs);
 
 	printf("\n");
 
-	printf("  Read operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
+	printf("  Read operations: %lu (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
 	       results->read_operations,
 	       100.0 * ((double)results->read_operations / (double)total_operations),
 	       100.0 * ((double)results->read_operations / (double)io_operations),
 	       results->read_operations / elapsed_secs);
 
-	printf("  Write operations: %ld (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
+	printf("  Write operations: %lu (%.1f%% total, %.1f%% read/write, %.2f/sec)\n",
 	       results->write_operations,
 	       100.0 * ((double)results->write_operations / (double)total_operations),
 	       100.0 * ((double)results->write_operations / (double)io_operations),
 	       results->write_operations / elapsed_secs);
 
-	printf("  Create operations: %ld (%.1f%% total, %.1f%% create/delete %.2f/sec)\n",
+	printf("  Create operations: %lu (%.1f%% total, %.1f%% create/delete %.2f/sec)\n",
 	       results->create_operations,
 	       100.0 * ((double)results->create_operations / (double)total_operations),
 	       100.0 * ((double)results->create_operations / (double)dir_operations),
 	       results->create_operations / elapsed_secs);
 
-	printf("  Delete operations: %ld (%.1f%% total, %.1f%% create/delete, %.2f/sec)\n",
+	printf("  Delete operations: %lu (%.1f%% total, %.1f%% create/delete, %.2f/sec)\n",
 	       results->delete_operations,
 	       100.0 * ((double)results->delete_operations / (double)total_operations),
 	       100.0 * ((double)results->delete_operations / (double)dir_operations),
@@ -127,15 +127,34 @@ static void verbose_total(const struct benchmark_results *results)
 	verbose_print_results(results, avg_elapsed_secs);
 }
 
-static void verbose_report(void)
+static void terse_report(const struct benchmark_results *results)
+{
+	printf("%lld.%.9ld\t%lu\t%lu\t%lu\t%lu\t%zu\t%zu\n",
+	       (long long)results->elapsed_time.tv_sec,
+	       results->elapsed_time.tv_nsec,
+	       results->read_operations,
+	       results->write_operations,
+	       results->create_operations,
+	       results->delete_operations,
+	       results->bytes_read,
+	       results->bytes_written);
+}
+
+static void final_report(bool verbose)
 {
 	struct benchmark_results total_results = {};
 
-	for (int i = 0; i < num_threads; i++) {
-		if (i > 0)
-			printf("\n");
+	if (!verbose)
+		printf("elapsed secs\tread ops\twrite ops\tcreate ops\tdelete ops\tbytes read\tbytes written\n");
 
-		verbose_thread(i);
+	for (int i = 0; i < num_threads; i++) {
+		if (verbose) {
+			if (i > 0)
+				printf("\n");
+			verbose_thread(i);
+		} else {
+			terse_report(&threads[i].results);
+		}
 
 		total_results.read_operations += threads[i].results.read_operations;
 		total_results.write_operations += threads[i].results.write_operations;
@@ -155,7 +174,7 @@ static void verbose_report(void)
 		}
 	}
 
-	if (num_threads > 1)
+	if (verbose && num_threads > 1)
 		verbose_total(&total_results);
 }
 
@@ -173,11 +192,15 @@ static void usage(bool error)
 		"Configuration:\n"
 		"  -C DIR       Change directories before running\n"
 		"  -c CONFIG    Benchmark configuration file\n"
-		"  -d           Dump benchmark configuration\n"
 		"  -p THREADS   Run multiple threads in parallel\n"
 		"  -s SEED      PRNG seed value\n"
 		"\n"
+		"Output:\n"
+		"  -t           Terse, parseable output\n"
+		"  -v           Verbose, human-readable output (default)\n"
+		"\n"
 		"Miscellaneous:\n"
+		"  -d           Dump benchmark configuration and exit\n"
 		"  -h           Display this help message and exit\n",
 		progname);
 
@@ -194,10 +217,11 @@ int main(int argc, char *argv[])
 	char *config_path;
 	long seed = 0xdeadbeefL;
 	bool dump_params_flag = false;
+	bool verbose = true;
 
 	progname = argv[0];
 
-	while ((opt = getopt(argc, argv, "C:c:dp:s:h")) != -1) {
+	while ((opt = getopt(argc, argv, "C:c:dp:s:tvh")) != -1) {
 		switch (opt) {
 		case 'C':
 			chdir_path = strdup(optarg);
@@ -231,6 +255,12 @@ int main(int argc, char *argv[])
 					progname);
 				return EXIT_FAILURE;
 			}
+			break;
+		case 't':
+			verbose = false;
+			break;
+		case 'v':
+			verbose = true;
 			break;
 		case 'h':
 			usage(false);
@@ -303,7 +333,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	verbose_report();
+	final_report(verbose);
 
 	return EXIT_SUCCESS;
 }
