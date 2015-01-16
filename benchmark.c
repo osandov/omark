@@ -138,8 +138,9 @@ static int create_file(struct benchmark_thread *thread)
 	return 0;
 }
 
-static int pick_file_locked(struct benchmark_thread *thread, char *name_ret,
-			    uint32_t *index_ret)
+/* files_lock must be held. */
+static int pick_file(struct benchmark_thread *thread, char *name_ret,
+		     uint32_t *index_ret)
 {
 	uint32_t index;
 
@@ -154,28 +155,20 @@ static int pick_file_locked(struct benchmark_thread *thread, char *name_ret,
 	return 0;
 }
 
-static int pick_file(struct benchmark_thread *thread, char *name_ret,
-		     uint32_t *index_ret)
-{
-	int ret;
-
-	pthread_rwlock_rdlock(&files_lock);
-	ret = pick_file_locked(thread, name_ret, index_ret);
-	pthread_rwlock_unlock(&files_lock);
-
-	return ret;
-}
-
 static void do_read(struct benchmark_thread *thread)
 {
 	char path[NAME_MAX];
 	int fd;
 	ssize_t ret;
 
-	if (pick_file(thread, path, NULL) == -1)
+	pthread_rwlock_rdlock(&files_lock);
+	if (pick_file(thread, path, NULL) == -1) {
+		pthread_rwlock_unlock(&files_lock);
 		return;
+	}
 
 	fd = open(path, O_RDONLY);
+	pthread_rwlock_unlock(&files_lock);
 	if (fd == -1) {
 		perror("open");
 		return;
@@ -200,10 +193,14 @@ static void do_write(struct benchmark_thread *thread)
 	size_t size;
 	int ret;
 
-	if (pick_file(thread, path, NULL) == -1)
+	pthread_rwlock_rdlock(&files_lock);
+	if (pick_file(thread, path, NULL) == -1) {
+		pthread_rwlock_unlock(&files_lock);
 		return;
+	}
 
 	fd = open(path, O_WRONLY | O_APPEND);
+	pthread_rwlock_unlock(&files_lock);
 	if (fd == -1) {
 		perror("open");
 		return;
@@ -233,7 +230,7 @@ static void do_delete(struct benchmark_thread *thread)
 	uint32_t index;
 
 	pthread_rwlock_wrlock(&files_lock);
-	if (pick_file_locked(thread, path, &index) == -1) {
+	if (pick_file(thread, path, &index) == -1) {
 		pthread_rwlock_unlock(&files_lock);
 		return;
 	}
