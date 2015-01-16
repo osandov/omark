@@ -335,5 +335,8 @@ int main(int argc, char *argv[])
 
 	final_report(verbose);
 
+	for (int i = 0; i < num_threads; i++)
+		free(threads[i].buffer);
+	free(threads);
 	return EXIT_SUCCESS;
 }
