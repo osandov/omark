@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <string.h>
 #include <stdio.h>
 #include "params.h"
@@ -20,8 +21,9 @@ int parse_params(const char *config_path)
 	FILE *file;
 	char *line = NULL;
 	size_t n = 0;
+	int lineno = 1;
 	ssize_t ret;
-	char buf[6];
+	int status = 0;
 
 	if (strcmp(config_path, "-") == 0) {
 		file = stdin;
@@ -34,28 +36,65 @@ int parse_params(const char *config_path)
 	}
 
 	while ((ret = getline(&line, &n, file)) >= 0) {
-		sscanf(line, "block-size %zu\n", &block_size);
-		if (sscanf(line, "block-aligned %5s", buf) == 1) {
-			if (strcmp(buf, "true") == 0)
-				block_aligned = true;
-			else if (strcmp(buf, "false") == 0)
-				block_aligned = false;
+		bool success = false;
+
+#define PARSE_PARAM(format, ptr) do {				\
+	if (!success)						\
+		success |= sscanf(line, format, ptr) == 1;	\
+} while (0)
+
+#define PARSE_BOOL(name, ptr) do {				\
+	if (!success) {						\
+		char buf[6];					\
+		if (sscanf(line, name " %5s", buf) == 1) {	\
+			if (strcmp(buf, "true") == 0) {		\
+				*ptr = true;			\
+				success = true;			\
+			} else if (strcmp(buf, "false") == 0) {	\
+				*ptr = true;			\
+				success = true;			\
+			}					\
+		}						\
+	}							\
+} while (0)
+
+		PARSE_PARAM("block-size %zu\n", &block_size);
+		PARSE_BOOL("block-aligned", &block_aligned);
+		PARSE_PARAM("initial-files %lu", &initial_files);
+		PARSE_PARAM("min-file-size %zu", &min_file_size);
+		PARSE_PARAM("max-file-size %zu", &max_file_size);
+		PARSE_PARAM("min-write-size %zu", &min_write_size);
+		PARSE_PARAM("max-write-size %zu", &max_write_size);
+		PARSE_PARAM("io-dir-ratio %lf", &io_dir_ratio);
+		PARSE_PARAM("read-write-ratio %lf", &read_write_ratio);
+		PARSE_PARAM("create-delete-ratio %lf", &create_delete_ratio);
+		PARSE_PARAM("max-operations %lu", &max_operations);
+		PARSE_PARAM("time-limit %lu", &time_limit);
+
+		if (!success) {
+			fprintf(stderr, "%s:%d: invalid configuration: %s",
+				file == stdin ? "<stdin>" : config_path,
+				lineno, line);
+			status = -1;
+			break;
 		}
-		sscanf(line, "initial-files %lu", &initial_files);
-		sscanf(line, "min-file-size %zu", &min_file_size);
-		sscanf(line, "max-file-size %zu", &max_file_size);
-		sscanf(line, "min-write-size %zu", &min_write_size);
-		sscanf(line, "max-write-size %zu", &max_write_size);
-		sscanf(line, "io-dir-ratio %lf", &io_dir_ratio);
-		sscanf(line, "read-write-ratio %lf", &read_write_ratio);
-		sscanf(line, "create-delete-ratio %lf", &create_delete_ratio);
-		sscanf(line, "max-operations %lu", &max_operations);
-		sscanf(line, "time-limit %lu", &time_limit);
+
+		lineno++;
+
+#undef PARSE_PARAM
+#undef PARSE_BOOL
 	}
 
+	if (ret == -1 && !feof(file)) {
+		perror("getline");
+		status = -1;
+	}
+
+	free(line);
 	if (file != stdin)
 		fclose(file);
-	return 0;
+
+	return status;
 }
 
 void dump_params(void)
