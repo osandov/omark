@@ -1,6 +1,6 @@
-#include <ctype.h>
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "params.h"
 
 size_t block_size = 512;
