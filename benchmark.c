@@ -268,6 +268,11 @@ int init_benchmark_files(uint32_t prng_seed)
 	return 0;
 }
 
+void uninit_benchmark(void)
+{
+	free(files_array);
+}
+
 static inline void timespec_subtract(struct timespec *restrict result,
 				     const struct timespec *restrict x,
 				     const struct timespec *restrict y)

@@ -34,6 +34,11 @@ extern pthread_barrier_t barrier;
 int init_benchmark_files(uint32_t prng_seed);
 
 /**
+ * uninit_benchmark - do any necessary post-benchmark cleanup
+ */
+void uninit_benchmark(void);
+
+/**
  * run_benchmark - run the benchmark
  */
 void *run_benchmark(void *arg);

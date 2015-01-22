@@ -338,5 +338,6 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < num_threads; i++)
 		free(threads[i].buffer);
 	free(threads);
+	uninit_benchmark();
 	return EXIT_SUCCESS;
 }
