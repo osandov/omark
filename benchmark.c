@@ -302,7 +302,7 @@ void *run_benchmark(void *arg)
 		if (max_operations) {
 			long ops = __atomic_fetch_add(&num_operations, 1,
 						      __ATOMIC_SEQ_CST);
-			if (ops > max_operations)
+			if (ops >= max_operations)
 				break;
 		}
 
