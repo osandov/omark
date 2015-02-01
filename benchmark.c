@@ -36,6 +36,7 @@ ssize_t read_full(int fd, void *buf, size_t count)
 		} else if (ret == 0) {
 			break;
 		}
+		buf = (char *)buf + ret;
 		total_read += ret;
 		count -= ret;
 	}
@@ -56,6 +57,7 @@ ssize_t write_full(int fd, void *buf, size_t count)
 				continue;
 			return -1;
 		}
+		buf = (char *)buf + ret;
 		total_written += ret;
 		count -= ret;
 	}

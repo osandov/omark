@@ -185,7 +185,7 @@ static void usage(bool error)
 	FILE *file = error ? stderr : stdout;
 
 	fprintf(file,
-		"Usage: %1$s [OPTIONS]\n"
+		"Usage: %s [OPTIONS]\n"
 		"\n"
 		"Filesystem benchmark.\n"
 		"\n"
