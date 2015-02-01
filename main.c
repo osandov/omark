@@ -310,10 +310,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	fprintf(stderr, "Creating initial benchmark files...\n");
 	ret = init_benchmark_files(seed - 1);
 	if (ret)
 		return EXIT_FAILURE;
 
+	fprintf(stderr, "Running benchmark...\n");
 	for (int i = 0; i < num_threads; i++) {
 		errno = pthread_create(&threads[i].thread, NULL, run_benchmark,
 				       &threads[i]);
