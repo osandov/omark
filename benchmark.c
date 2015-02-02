@@ -111,7 +111,8 @@ static int create_file(struct benchmark_thread *thread)
 
 	size = prng_range(&thread->prng, min_file_size, max_file_size + 1);
 	ret = write_to_file(thread, fd, size);
-	close(fd);
+	if (close(fd) == -1)
+		perror("close");
 	if (ret == -1)
 		return -1;
 
@@ -180,11 +181,13 @@ static void do_read(struct benchmark_thread *thread)
 		thread->results.bytes_read += ret;
 	if (ret == -1) {
 		perror("read");
-		close(fd);
+		if (close(fd) == -1)
+			perror("close");
 		return;
 	}
 
-	close(fd);
+	if (close(fd) == -1)
+		perror("close");
 	thread->results.read_operations++;
 }
 
@@ -210,7 +213,8 @@ static void do_write(struct benchmark_thread *thread)
 
 	size = prng_range(&thread->prng, min_write_size, max_write_size + 1);
 	ret = write_to_file(thread, fd, size);
-	close(fd);
+	if (close(fd) == -1)
+		perror("close");
 	if (ret == -1)
 		return;
 
