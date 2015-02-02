@@ -39,8 +39,8 @@ OMark can either output verbose, human-readable output with `-v`, which is also
 the default, or terse output suitable for parsing by, for example, AWK, with
 `-t`.
 
-Terse output prints the results for each thread on its own line, followed by
-the total results. The columns are (in order):
+Terse output prints the results for each thread on its own line. The columns
+are (in order):
 
 1. Elapsed seconds
 2. Read operations
