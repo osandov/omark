@@ -144,9 +144,6 @@ static void final_report(bool verbose)
 {
 	struct benchmark_results total_results = {};
 
-	if (!verbose)
-		printf("elapsed secs\tread ops\twrite ops\tcreate ops\tdelete ops\tbytes read\tbytes written\n");
-
 	for (int i = 0; i < num_threads; i++) {
 		if (verbose) {
 			if (i > 0)

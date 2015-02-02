@@ -39,6 +39,17 @@ OMark can either output verbose, human-readable output with `-v`, which is also
 the default, or terse output suitable for parsing by, for example, AWK, with
 `-t`.
 
+Terse output prints the results for each thread on its own line, followed by
+the total results. The columns are (in order):
+
+1. Elapsed seconds
+2. Read operations
+3. Write operations
+4. Create opeations
+5. Delete operations
+6. Bytes read
+7. Bytes written
+
 === Benchmark Configuration
 OMark is configured with a configuration file which is specified with the `-c`
 flag. The format is a simple series of `key value` lines, where the valid keys
